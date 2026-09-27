@@ -232,25 +232,31 @@ jobs:
           echo "✅ Setup completed."
 
       - name: ♻️ 初始化数据库 / Initialize database
+        working-directory: ./mail-worker
         run: |
           echo "🛠️ Starting database initialization..."
-          sleep 15
-          
-          WORKER_URL="${CUSTOM_DOMAIN:+https://$CUSTOM_DOMAIN}"
-          WORKER_URL="${WORKER_URL:-${{ steps.deploy.outputs.worker_url }}}"
-          
-          if [ -z "$WORKER_URL" ]; then
-            echo "❌ Preview URL not available. Please set CUSTOM_DOMAIN."
+          pnpm wrangler dev --remote -c wrangler-action.toml --ip 127.0.0.1 --port 8787 > wrangler-dev.log 2>&1 &
+          DEV_PID=$!
+          trap 'kill "$DEV_PID" 2>/dev/null || true' EXIT
+
+          READY=false
+          for i in {1..60}; do
+            if [ "$(curl --silent --max-time 3 http://127.0.0.1:8787/api/init/invalid || true)" = "❌ JWT secret mismatch" ]; then
+              READY=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$READY" != true ]; then
+            echo "❌ Remote Worker preview did not become ready."
             exit 1
           fi
-          
-          HTTP_CODE=$(curl -sL -w "%{http_code}" -o response.txt "$WORKER_URL/api/init/${JWT_SECRET}")
-          RESPONSE_BODY=$(cat response.txt)
 
-          if [ "$RESPONSE_BODY" = "success" ]; then
+          HTTP_CODE=$(curl --silent --max-time 120 --write-out "%{http_code}" --output response.txt "http://127.0.0.1:8787/api/init/${JWT_SECRET}")
+          if [ "$HTTP_CODE" = "200" ] && [ "$(cat response.txt)" = "success" ]; then
             echo "✅ Setup completed."
           else
-            echo "❌ Failed. HTTP: $HTTP_CODE, Response: $RESPONSE_BODY"
+            echo "❌ Initialization failed. HTTP: $HTTP_CODE"
             exit 1
           fi
 
