@@ -77,7 +77,7 @@
     </el-scrollbar>
     <el-dialog v-model="showAdd" :title="$t('addAccount')">
       <div class="container">
-        <el-input v-model="addForm.email" ref="addRef" type="text" :placeholder="$t('emailAccount')" autocomplete="off">
+        <el-input v-model="addForm.email" ref="addRef" type="text" :placeholder="$t('emailAccount')" autocomplete="off" @keyup.enter="submit">
           <template #append>
             <div @click.stop="openSelect">
               <el-select
@@ -116,7 +116,7 @@
     </el-dialog>
     <el-dialog v-model="setNameShow" :title="$t('changeUserName')">
       <div class="container">
-        <el-input v-model="accountName" type="text" :placeholder="$t('username')" autocomplete="off">
+        <el-input v-model="accountName" type="text" :placeholder="$t('username')" autocomplete="off" @keyup.enter="setName">
         </el-input>
         <el-button class="btn" type="primary" @click="setName" :loading="setNameLoading"
         >{{ $t('save') }}
@@ -127,7 +127,7 @@
 </template>
 <script setup>
 import {Icon} from "@iconify/vue";
-import {nextTick, reactive, ref, watch} from "vue";
+import {computed, nextTick, reactive, ref, watch} from "vue";
 import {
   accountList,
   accountAdd,
@@ -153,7 +153,7 @@ const settingStore = useSettingStore();
 const emailStore = useEmailStore();
 const showAdd = ref(false)
 const addLoading = ref(false);
-const domainList = settingStore.domainList
+const domainList = computed(() => settingStore.domainList)
 const accounts = reactive([])
 const noLoading = ref(false)
 const loading = ref(false)
@@ -189,6 +189,12 @@ watch(() => accountStore.changeUserAccountName, () => {
   accounts[0].name = accountStore.changeUserAccountName
 })
 
+watch(() => settingStore.domainList, (list) => {
+  if (!addForm.suffix && list.length > 0) {
+    addForm.suffix = list[0]
+  }
+}, {immediate: true})
+
 
 const openSelect = () => {
   mySelect.value.toggleMenu()
@@ -222,6 +228,8 @@ function getSkeletonRows() {
 }
 
 function setName() {
+
+  if (setNameLoading.value) return
 
   let name = accountName.value
 
@@ -338,6 +346,7 @@ function changeAccount(account) {
 }
 
 function add() {
+  addForm.suffix = addForm.suffix || settingStore.domainList[0]
   showAdd.value = true
   setTimeout(() => {
     addRef.value.focus()
@@ -420,6 +429,8 @@ function getAccountList() {
 
 function submit() {
 
+  if (addLoading.value) return
+
   if (!addForm.email) {
     ElMessage({
       message: t('emptyEmailMsg'),
@@ -475,7 +486,6 @@ function submit() {
   addLoading.value = true
   accountAdd(addForm.email + addForm.suffix, verifyToken).then(account => {
     addLoading.value = false
-    showAdd.value = false
     addForm.email = ''
     accounts.push(account)
     verifyToken = ''
@@ -486,6 +496,7 @@ function submit() {
       plain: true
     })
     verifyShow.value = false
+    showAdd.value = false
     userStore.refreshUserInfo()
   }).catch(res => {
     if (res.code === 400) {
@@ -573,14 +584,15 @@ path[fill="#ffdda1"] {
   .item {
     background-color: var(--el-bg-color);
     border-radius: 8px;
-    padding: 12px 10px;
-    margin-bottom: 10px;
+    padding: 10px;
+    margin-bottom: 11px;
     margin-left: 10px;
     margin-right: 10px;
     cursor: pointer;
 
     .account {
-      font-weight: 600;
+      font-weight: 400;
+      font-size: 15px;
       margin-bottom: 20px;
       overflow: hidden;
       white-space: nowrap;
