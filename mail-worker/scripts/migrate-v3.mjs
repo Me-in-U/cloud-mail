@@ -64,9 +64,9 @@ for (const sql of statements) {
 const temp = mkdtempSync(join(tmpdir(), 'cloud-mail-v3-'));
 try {
   if (pending.length) {
-    const path = join(temp, 'migration.sql');
-    writeFileSync(path, pending.map((sql) => sql.endsWith(';') ? sql : `${sql};`).join('\n'));
-    wrangler(['d1', 'execute', 'db', '--remote', '-c', 'wrangler-action.toml', '--file', path, '--yes']);
+    for (const sql of pending) {
+      wrangler(['d1', 'execute', 'db', '--remote', '-c', 'wrangler-action.toml', '--command', sql, '--yes']);
+    }
   }
 
   const verified = new Map(['setting', 'email'].map((table) => [
