@@ -233,45 +233,7 @@ jobs:
 
       - name: ♻️ 初始化数据库 / Initialize database
         working-directory: ./mail-worker
-        run: |
-          echo "🛠️ Starting database initialization..."
-          pnpm wrangler dev --remote -c wrangler-action.toml --ip 127.0.0.1 --port 8787 > wrangler-dev.log 2>&1 &
-          DEV_PID=$!
-          trap 'kill "$DEV_PID" 2>/dev/null || true' EXIT
-
-          READY=false
-          for i in {1..60}; do
-            if [ "$(curl --silent --max-time 3 http://127.0.0.1:8787/api/init/invalid || true)" = "❌ JWT secret mismatch" ]; then
-              READY=true
-              break
-            fi
-            if ! kill -0 "$DEV_PID" 2>/dev/null; then
-              break
-            fi
-            sleep 2
-          done
-          if [ "$READY" != true ]; then
-            echo "❌ Remote Worker preview did not become ready."
-            python3 - <<'PY'
-          import os
-          from pathlib import Path
-          log = Path('wrangler-dev.log').read_text(errors='replace')
-          for name in ('JWT_SECRET', 'ADMIN', 'DOMAIN', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'D1_DATABASE_ID', 'KV_NAMESPACE_ID', 'CUSTOM_DOMAIN'):
-              value = os.environ.get(name)
-              if value:
-                  log = log.replace(value, '[redacted]')
-          print('\n'.join(log.splitlines()[-30:]))
-          PY
-            exit 1
-          fi
-
-          HTTP_CODE=$(curl --silent --max-time 120 --write-out "%{http_code}" --output response.txt "http://127.0.0.1:8787/api/init/${JWT_SECRET}")
-          if [ "$HTTP_CODE" = "200" ] && [ "$(cat response.txt)" = "success" ]; then
-            echo "✅ Setup completed."
-          else
-            echo "❌ Initialization failed. HTTP: $HTTP_CODE"
-            exit 1
-          fi
+        run: node scripts/migrate-v3.mjs
 
       - name: 🗑️ 删除运行记录 / Delete workflow runs
         uses: GitRML/delete-workflow-runs@main
