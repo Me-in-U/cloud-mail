@@ -27,7 +27,7 @@ export default {
 	},
 	email: email,
 	async scheduled(c, env, ctx) {
-		if (c.cron === '* * * * *') {
+		if (c.cron === '* * * * *' || c.cron === '0 * * * *') {
 			if (await env.kv.get('cloud-mail:v3-init-complete') === '1') return;
 			const migration = { env, set() {} };
 			await dbInit.v3_0DB(migration);
