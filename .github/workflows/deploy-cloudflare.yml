@@ -245,10 +245,23 @@ jobs:
               READY=true
               break
             fi
+            if ! kill -0 "$DEV_PID" 2>/dev/null; then
+              break
+            fi
             sleep 2
           done
           if [ "$READY" != true ]; then
             echo "❌ Remote Worker preview did not become ready."
+            python3 - <<'PY'
+          import os
+          from pathlib import Path
+          log = Path('wrangler-dev.log').read_text(errors='replace')
+          for name in ('JWT_SECRET', 'ADMIN', 'DOMAIN', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'D1_DATABASE_ID', 'KV_NAMESPACE_ID', 'CUSTOM_DOMAIN'):
+              value = os.environ.get(name)
+              if value:
+                  log = log.replace(value, '[redacted]')
+          print('\n'.join(log.splitlines()[-30:]))
+          PY
             exit 1
           fi
 
