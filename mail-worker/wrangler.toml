@@ -3,6 +3,15 @@ main = "src/index.js"
 compatibility_date = "2025-06-04"
 keep_vars = true
 
+[[d1_databases]]
+binding = "db"
+database_name = "cloud-mail"
+database_id = "9eb28b85-cb64-48e2-90a3-ffa1c42f2bdf"
+
+[[kv_namespaces]]
+binding = "kv"
+id = "3771d6ba88aa40b1a02131dfa7d96a6b"
+
 [observability]
 enabled = true
 
