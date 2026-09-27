@@ -24,7 +24,13 @@ function wrangler(args) {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
   } catch (error) {
-    throw new Error(`Wrangler ${args[0]} failed with exit status ${error.status}`);
+    let detail = String(error.stderr || '').slice(-2000);
+    for (const name of ['JWT_SECRET', 'ADMIN', 'DOMAIN', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'D1_DATABASE_ID', 'KV_NAMESPACE_ID', 'CUSTOM_DOMAIN']) {
+      const value = process.env[name];
+      if (value) detail = detail.replaceAll(value, '[redacted]');
+    }
+    const stage = args.includes('--command') ? args[args.indexOf('--command') + 1] : args.includes('--file') ? 'migration file' : 'cache update';
+    throw new Error(`Wrangler ${args[0]} failed at ${stage} with exit status ${error.status}: ${detail}`);
   }
 }
 
