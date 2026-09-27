@@ -1,4 +1,4 @@
-name: Diagnose Cloud Mail migration
+name: Apply and inspect Cloud Mail migration trigger
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || vars.CLOUDFLARE_API_TOKEN }}
     steps:
-      - name: Inspect schedules and D1 schema
+      - name: Apply trigger and inspect D1 schema
         run: |
           set -euo pipefail
           API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
@@ -22,6 +22,8 @@ jobs:
           else
             echo "Schedules could not be read with this token."
           fi
+          SCHEDULES=$(curl --fail --silent --show-error -X PUT -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' --data '[{"cron":"0 * * * *"},{"cron":"* * * * *"}]' "$API/workers/scripts/cloud-mail/schedules")
+          echo "Applied schedules: $(jq -r '[.result.schedules[].cron] | join(", ")' <<< "$SCHEDULES")"
           for TABLE in setting email; do
             BODY=$(jq -n --arg sql "PRAGMA table_info($TABLE)" '{sql: $sql}')
             RESULT=$(curl --fail --silent --show-error -X POST -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' --data "$BODY" "$API/d1/database/$DB_ID/query")
