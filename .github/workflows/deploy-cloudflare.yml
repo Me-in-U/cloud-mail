@@ -233,16 +233,7 @@ jobs:
 
       - name: ♻️ 初始化数据库 / Initialize database
         working-directory: ./mail-worker
-        timeout-minutes: 30
-        run: |
-          for i in {1..80}; do
-            if node scripts/verify-v3.mjs >/dev/null 2>&1; then
-              echo "✅ V3 database and settings verified."
-              exit 0
-            fi
-            sleep 15
-          done
-          node scripts/verify-v3.mjs
+        run: node scripts/verify-v3.mjs
 
       - name: 🗑️ 删除运行记录 / Delete workflow runs
         uses: GitRML/delete-workflow-runs@main
