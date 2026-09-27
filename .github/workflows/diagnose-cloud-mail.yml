@@ -22,8 +22,6 @@ jobs:
           else
             echo "Schedules could not be read with this token."
           fi
-          SCHEDULES=$(curl --fail --silent --show-error -X PUT -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' --data '[{"cron":"* * * * *"}]' "$API/workers/scripts/cloud-mail/schedules")
-          echo "Applied schedules: $(jq -r '[.result.schedules[].cron] | join(", ")' <<< "$SCHEDULES")"
           for TABLE in setting email; do
             BODY=$(jq -n --arg sql "PRAGMA table_info($TABLE)" '{sql: $sql}')
             RESULT=$(curl --fail --silent --show-error -X POST -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' --data "$BODY" "$API/d1/database/$DB_ID/query")
